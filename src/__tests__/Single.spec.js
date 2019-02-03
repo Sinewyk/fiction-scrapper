@@ -1,0 +1,3 @@
+describe('Single', () => {
+	it('foo', () => {});
+});

@@ -1,0 +1,34 @@
+{
+  "name": "fiction-scrapper",
+  "version": "0.1.0",
+  "main": "src/index.js",
+  "license": "MIT",
+  "scripts": {
+    "compile": "babel src --out-dir lib",
+    "format": "prettier --write src/*",
+    "test": "jest src"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.2.3",
+    "@babel/core": "^7.2.2",
+    "@babel/preset-env": "^7.3.1",
+    "jest": "^24.0.0",
+    "prettier": "^1.16.4"
+  },
+  "prettier": {
+    "semi": true,
+    "useTabs": true,
+    "trailingComma": "all",
+    "singleQuote": true,
+    "printWidth": 100
+  },
+  "dependencies": {
+    "@cycle/http": "^15.1.0",
+    "@cycle/isolate": "^4.2.0",
+    "@cycle/run": "^5.2.0",
+    "@cycle/state": "^1.1.0",
+    "debug": "^4.1.1",
+    "ramda": "^0.26.1",
+    "xstream": "^11.10.0"
+  }
+}
