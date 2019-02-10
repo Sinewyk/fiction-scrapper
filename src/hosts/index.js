@@ -15,5 +15,10 @@ export const getBookConf = initialUrl => {
 
 	assert(bookConfFactory, 'Url must be a supported hostname');
 
-	return bookConfFactory.createBookConf(initialUrl);
+	const bookConf = bookConfFactory.createBookConf(initialUrl);
+
+	return {
+		...bookConf,
+		givenUrl: initialUrl,
+	};
 };

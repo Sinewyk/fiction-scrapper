@@ -13,20 +13,25 @@ export function makeConsoleDriver(options = {}) {
 		});
 
 		if (options.listenToStdin) {
-			const stream =
-				xs.create <
-				string >
-				{
-					start: listener =>
-						process.stdin.on('data', data => {
-							const str = data.toString();
-							if (str.slice(0, 4) === 'exit') {
-								process.exit(0);
-							}
-							listener.next(str);
-						}),
-					stop: () => process.stdin.removeAllListeners(),
-				};
+			let listenerHandle;
+			const stream = xs.create({
+				start: listener => {
+					listenerHandle = data => {
+						const str = data.toString();
+						if (str.slice(0, 4) === 'exit') {
+							process.exit(0);
+						}
+						listener.next(str);
+					};
+					process.stdin.on('data', listenerHandle);
+				},
+				stop: () => {
+					if (listenerHandle) {
+						process.stdin.removeListener('data', listenerHandle);
+						listenerHandle = null;
+					}
+				},
+			});
 			return stream;
 		}
 

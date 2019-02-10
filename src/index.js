@@ -1,9 +1,11 @@
 import xs from 'xstream';
 import { run } from '@cycle/run';
 import main from './main';
+import getBookConf from './hosts';
 import { makeConsoleDriver } from './drivers/makeConsoleDriver';
 import { makeHTTPDriver } from '@cycle/http';
 import { withState } from '@cycle/state';
+import { makeInjectDriver } from './drivers/makeInjectDriver';
 
 const drivers = {
 	initialData: () =>
@@ -15,6 +17,7 @@ const drivers = {
 			// 'http://www.wuxiaworld.com/tde-index/tde-chapter-196/', // right host but 404
 			'https://www.wuxiaworld.com/novel/sovereign-of-the-three-realms/sotr-chapter-943', // right host and ok url
 		]),
+	getBookConf: makeInjectDriver(getBookConf),
 	console: makeConsoleDriver(),
 	HTTP: makeHTTPDriver(),
 };
