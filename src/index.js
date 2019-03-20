@@ -1,7 +1,7 @@
 import xs from 'xstream';
 import { run } from '@cycle/run';
 import main from './main';
-import getBookConf from './hosts';
+import { getBookConf } from './hosts';
 import { makeConsoleDriver } from './drivers/makeConsoleDriver';
 import { makeHTTPDriver } from '@cycle/http';
 import { withState } from '@cycle/state';

@@ -1,4 +1,4 @@
-import Single from '../Single';
+import { Single } from '../Single';
 import { withState } from '@cycle/state';
 import { setup } from '@cycle/run';
 import * as assert from 'assert';

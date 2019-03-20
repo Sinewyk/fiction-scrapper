@@ -1,13 +1,38 @@
 import xs from 'xstream';
 
+const INIT_ACTION = {
+	type: 'INIT',
+};
+
 const INIT_STATUS = 'INIT';
 const OK_STATUS = 'OK';
 const ERROR_STATUS = 'ERROR';
 
-export default function Single(sources) {
+export function makeInitialState(initialUrl) {
+	return {
+		id: initialUrl,
+		chapters: [],
+	};
+}
+
+export function Single(sources) {
 	const bookConf$ = xs
 		.combine(sources.getBookConf, sources.initialData)
 		.map(([getBookConf, url]) => getBookConf(url));
+
+	const actions$ = xs.of(INIT_ACTION);
+
+	// do stuff and merge inside actions$ ?
+
+	actions$.map(action => {
+		switch (
+			action.type
+			/* Todo stuff
+			return multiple streams of state and http ?
+		*/
+		) {
+		}
+	});
 
 	const initialHttpRequest$ = bookConf$
 		.map(bookConf => {
