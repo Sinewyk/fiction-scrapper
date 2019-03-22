@@ -6,7 +6,8 @@
   "scripts": {
     "compile": "babel src --out-dir lib",
     "format": "prettier --write src/*",
-    "test": "jest src"
+    "test": "jest lib",
+    "jest": "yarn test"
   },
   "devDependencies": {
     "@babel/cli": "^7.2.3",
