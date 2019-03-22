@@ -1,8 +1,11 @@
 import { Single } from '../Single';
 import { withState } from '@cycle/state';
 import { setup } from '@cycle/run';
+import { mockHTTPDriver } from '@cycle/http/lib/cjs/mockHTTPDriver';
 import * as assert from 'assert';
 import xs from 'xstream';
+
+const getChapterUrl = x => String(x);
 
 describe('Single', () => {
 	let dispose;
@@ -14,8 +17,21 @@ describe('Single', () => {
 			xs.of(givenUrl => ({
 				givenUrl,
 				shouldFetchInfos: false,
+				getChapterUrl,
 			})),
-		HTTP: () => xs.empty(),
+		HTTP: mockHTTPDriver([
+			{
+				pattern: '.*',
+				fixtures: () => {},
+				get: () => {
+					return {
+						body: '',
+						text: '',
+						status: 200,
+					};
+				},
+			},
+		]),
 	};
 
 	beforeEach(() => {
@@ -23,6 +39,10 @@ describe('Single', () => {
 			dispose();
 			dispose = null;
 		}
+	});
+
+	afterAll(() => {
+		dispose();
 	});
 
 	describe('init', () => {
@@ -35,8 +55,29 @@ describe('Single', () => {
 						state.id,
 						'https://www.wuxiaworld.com/novel/sovereign-of-the-three-realms/sotr-chapter-943',
 					);
-					assert.equal(state.status, 'INIT');
-					assert.deepStrictEqual(state.chapters, []);
+					assert.equal(state.status, 'DOWNLOADING_STATUS');
+					assert.deepStrictEqual(state.chapters, [
+						{
+							number: 1,
+							status: 'DOWNLOADING_STATUS',
+						},
+						{
+							number: 2,
+							status: 'DOWNLOADING_STATUS',
+						},
+						{
+							number: 3,
+							status: 'DOWNLOADING_STATUS',
+						},
+						{
+							number: 4,
+							status: 'DOWNLOADING_STATUS',
+						},
+						{
+							number: 5,
+							status: 'DOWNLOADING_STATUS',
+						},
+					]);
 					done();
 				},
 				error: done,
@@ -46,16 +87,15 @@ describe('Single', () => {
 		});
 
 		it('should send a request to fetch infos when needed', done => {
-			const { sinks, run } = setup(
-				withState(Single),
-				Object.assign(drivers, {
-					getBookConf: () =>
-						xs.of(givenUrl => ({
-							givenUrl,
-							shouldFetchInfos: true,
-						})),
-				}),
-			);
+			const { sinks, run } = setup(withState(Single), {
+				...drivers,
+				getBookConf: () =>
+					xs.of(givenUrl => ({
+						givenUrl,
+						shouldFetchInfos: true,
+						getChapterUrl,
+					})),
+			});
 
 			sinks.HTTP.addListener({
 				next: req => {
