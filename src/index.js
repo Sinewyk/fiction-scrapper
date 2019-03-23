@@ -15,7 +15,8 @@ const drivers = {
 			// 'https://www.fanfiction.net/s/12576821/1/War-Crimes',
 			// 'https://jsonplaceholder.typicode.com/users/1',
 			// 'http://www.wuxiaworld.com/tde-index/tde-chapter-196/', // right host but 404
-			'https://www.wuxiaworld.com/novel/sovereign-of-the-three-realms/sotr-chapter-943', // right host and ok url
+			// 'https://www.wuxiaworld.com/novel/sovereign-of-the-three-realms/sotr-chapter-943',
+			'https://www.wuxiaworld.com/novel/tales-of-demons-and-gods/tdg-chapter-1',
 		]),
 	getBookConf: makeInjectDriver(getBookConf),
 	console: makeConsoleDriver(),

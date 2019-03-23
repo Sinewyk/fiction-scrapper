@@ -30,15 +30,9 @@ export default function main(sources) {
 
 	const reducer$ = xs.merge(initReducer$, booksSinks.state);
 
-	const debug$ = d.enabled
-		? sources.state.stream
-				.map(state => `Current state :\n${JSON.stringify(state, null, '  ')}\n`)
-				.compose(debounce(50))
-		: xs.empty();
-
 	return {
 		state: reducer$,
 		HTTP: booksSinks.HTTP,
-		console: xs.merge(booksSinks.console, debug$),
+		console: xs.merge(booksSinks.console),
 	};
 }
