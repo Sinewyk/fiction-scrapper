@@ -16,7 +16,8 @@ const drivers = {
 			// 'https://jsonplaceholder.typicode.com/users/1',
 			// 'http://www.wuxiaworld.com/tde-index/tde-chapter-196/', // right host but 404
 			// 'https://www.wuxiaworld.com/novel/sovereign-of-the-three-realms/sotr-chapter-943',
-			'https://www.wuxiaworld.com/novel/tales-of-demons-and-gods/tdg-chapter-1',
+			// 'https://www.wuxiaworld.com/novel/tales-of-demons-and-gods/tdg-chapter-1',
+			'https://www.wuxiaworld.com/novel/heros-shed-no-tears/hsnt-chapter-0', // low chapter count
 		]),
 	getBookConf: makeInjectDriver(getBookConf),
 	console: makeConsoleDriver(),

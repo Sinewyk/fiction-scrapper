@@ -6,10 +6,8 @@ import R from 'ramda';
 // Book statuses
 const INIT_STATUS = 'INIT_STATUS';
 const FETCHING_INFO_STATUS = 'FETCHING_INFO_STATUS';
-
-// Chapter statuses
+const ERROR_STATUS = 'ERROR_STATUS'; // If finished and not only OK and NOT_FOUND for chapters
 const OK_STATUS = 'OK_STATUS';
-const NOT_FOUND_STATUS = 'NOT_FOUND_STATUS';
 
 // Both statuses
 const DOWNLOADING_STATUS = 'DOWNLOADING_STATUS';
@@ -25,6 +23,24 @@ export function makeInitialState(initialUrl) {
 	};
 }
 
+const receiveChapterAndAddNext = (index, content) => prevState =>
+	R.evolve(
+		{
+			chapters: R.pipe(
+				R.adjust(index, prev => ({
+					...prev,
+					status: 200,
+					content: content.slice(0, 10),
+				})),
+				R.append({
+					number: prevState.chapters.length + 1,
+					status: DOWNLOADING_STATUS,
+				}),
+			),
+		},
+		prevState,
+	);
+
 const split = whatToSplit => stream =>
 	stream
 		.map(x => x[whatToSplit])
@@ -39,75 +55,6 @@ export function Single(sources) {
 	const bookConf$ = xs
 		.combine(sources.initialData, sources.getBookConf)
 		.map(([url, getBookConf]) => getBookConf(url));
-
-	const responseHandler$ = bookConf$
-		.map(bookConf =>
-			sources.HTTP.select(bookConf.givenUrl)
-				.map(response$ => response$.replaceError(err => xs.of(err.response))) // Just passthru errors
-				.compose(flattenConcurrently),
-		)
-		.flatten()
-		.compose(sampleCombine(sources.state.stream, bookConf$))
-		.map(([res, state, bookConf]) => {
-			const currentNumber = res.request.number;
-
-			// Init is 'done'
-
-			// The meat of the download is done but
-			// @TODO (sinewyk): in case of 'in the middle' 404
-			// retry ...
-			// go back to 5 concurrent requests
-			// and try to warn user of missing chapter in the middle if still 404
-
-			// @TODO: figure out "finish" signal, to sort, clean up, and save to html file
-
-			if (res.status === 200) {
-				return {
-					state: xs.of(prevState => {
-						const foundIndex = R.findIndex(R.propEq('number', currentNumber), prevState.chapters);
-						return {
-							...prevState,
-							chapters: [
-								...prevState.chapters.slice(0, foundIndex),
-								{
-									...prevState.chapters[foundIndex],
-									status: OK_STATUS,
-								},
-								...prevState.chapters.slice(foundIndex + 1, prevState.chapters.length),
-								{
-									number: prevState.chapters.length + 1,
-									status: DOWNLOADING_STATUS,
-								},
-							],
-						};
-					}),
-					HTTP: xs.of({
-						number: state.chapters.length + 1,
-						category: bookConf.givenUrl,
-						url: bookConf.getChapterUrl(state.chapters.length + 1),
-					}),
-					console: xs.of(`${res.status} on ${res.request.url}\n`),
-				};
-			} else if (res.status === 404) {
-				return {
-					state: xs.of(prevState => {
-						const foundIndex = R.findIndex(R.propEq('number', currentNumber), prevState.chapters);
-						return {
-							...prevState,
-							chapters: [
-								...prevState.chapters.slice(0, foundIndex),
-								{
-									...prevState.chapters[foundIndex],
-									status: NOT_FOUND_STATUS,
-									content: res.text,
-								},
-								...prevState.chapters.slice(foundIndex + 1, prevState.chapters.length),
-							],
-						};
-					}),
-				};
-			}
-		});
 
 	const init$ = bookConf$.map(bookConf => {
 		if (bookConf.shouldFetchInfos) {
@@ -144,9 +91,87 @@ export function Single(sources) {
 		}
 	});
 
+	const responseHandler$ = bookConf$
+		.map(bookConf =>
+			sources.HTTP.select(bookConf.givenUrl)
+				.map(response$ => response$.replaceError(err => xs.of(err.response))) // Just passthru errors
+				.compose(flattenConcurrently),
+		)
+		.flatten()
+		.compose(sampleCombine(sources.state.stream, bookConf$))
+		.map(([res, state, bookConf]) => {
+			const requestNumber = res.request.number;
+			const foundIndex = R.findIndex(R.propEq('number', requestNumber), state.chapters);
+
+			// The meat of the download is done but
+			// @TODO (sinewyk): in case of 'in the middle' 404
+			// retry ...
+			// go back to 5 concurrent requests
+			// and try to warn user of missing chapter in the middle if still 404
+
+			if (res.status === 200) {
+				return {
+					state: xs.of(prevState => {
+						if (prevState !== state) {
+							// @FIXME: race condition
+							// answer => https://gist.github.com/Sinewyk/7db1089db3a234afdad2b0bd2ec3ece2 ?
+							console.error(new Error('Race condition detected'));
+							process.exit(1);
+						}
+						return receiveChapterAndAddNext(foundIndex, res.text)(prevState);
+					}),
+					HTTP: xs.of({
+						number: state.chapters.length + 1,
+						category: bookConf.givenUrl,
+						url: bookConf.getChapterUrl(state.chapters.length + 1),
+					}),
+					console: xs.from([
+						`Sending request ${JSON.stringify({
+							number: state.chapters.length + 1,
+							url: bookConf.getChapterUrl(state.chapters.length + 1),
+						})}\n`,
+						`${res.status} on ${res.request.url}\n`,
+					]),
+				};
+			} else if (res.status === 404) {
+				return {
+					state: xs.of(
+						R.evolve({
+							chapters: R.adjust(foundIndex, R.evolve({ status: R.always(404) })),
+						}),
+					),
+					console: xs.of(`${res.status} on ${res.request.url}\n`),
+				};
+			} else {
+				return {
+					state: xs.of(
+						R.evolve({
+							chapters: R.adjust(foundIndex, R.evolve({ status: R.always(res.status) })),
+						}),
+					),
+					console: xs.of(`${res.status} on ${res.request.url}\n`),
+				};
+			}
+		});
+
+	const end$ = sources.state.stream
+		.filter(
+			state =>
+				state.status === DOWNLOADING_STATUS &&
+				state.chapters.filter(x => x.status === DOWNLOADING_STATUS).length === 0,
+		)
+		.map(() => prevState => ({
+			...prevState,
+			status: OK_STATUS,
+		}));
+
+	const ended$ = sources.state.stream
+		.filter(state => state.status === OK_STATUS)
+		.map(() => 'Finished !\n');
+
 	return {
-		state: xs.merge(splitState(init$), splitState(responseHandler$)),
+		state: xs.merge(splitState(init$), splitState(responseHandler$), end$),
 		HTTP: xs.merge(splitHTTP(init$), splitHTTP(responseHandler$)),
-		console: xs.merge(splitConsole(responseHandler$)),
+		console: xs.merge(splitConsole(responseHandler$), ended$),
 	};
 }
