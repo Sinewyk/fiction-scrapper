@@ -16,6 +16,7 @@ const Books = makeCollection({
 			state: instances.pickMerge('state'),
 			console: instances.pickMerge('console'),
 			HTTP: instances.pickMerge('HTTP'),
+			endState: instances.pickMerge('endState'),
 		};
 	},
 });
@@ -34,5 +35,6 @@ export default function main(sources) {
 		state: reducer$,
 		HTTP: booksSinks.HTTP,
 		console: xs.merge(booksSinks.console),
+		endState: booksSinks.endState,
 	};
 }

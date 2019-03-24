@@ -30,7 +30,7 @@ const receiveChapterAndAddNext = (index, content) => prevState =>
 				R.adjust(index, prev => ({
 					...prev,
 					status: 200,
-					content: content.slice(0, 10),
+					content,
 				})),
 				R.append({
 					number: prevState.chapters.length + 1,
@@ -167,11 +167,15 @@ export function Single(sources) {
 
 	const ended$ = sources.state.stream
 		.filter(state => state.status === OK_STATUS)
-		.map(() => 'Finished !\n');
+		.map(state => `Finished ${state.id} !\n`);
 
 	return {
 		state: xs.merge(splitState(init$), splitState(responseHandler$), end$),
 		HTTP: xs.merge(splitHTTP(init$), splitHTTP(responseHandler$)),
-		console: xs.merge(splitConsole(responseHandler$), ended$),
+		// console: xs.merge(splitConsole(responseHandler$), ended$),
+		endState: ended$
+			.map(() => sources.state.stream)
+			.flatten()
+			.take(1),
 	};
 }
