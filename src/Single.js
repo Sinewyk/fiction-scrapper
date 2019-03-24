@@ -53,8 +53,9 @@ const splitConsole = split('console');
 
 export function Single(sources) {
 	const bookConf$ = xs
-		.combine(sources.initialData, sources.getBookConf)
-		.map(([url, getBookConf]) => getBookConf(url));
+		.combine(sources.state.stream.take(1), sources.getBookConf)
+		.map(([state, getBookConf]) => getBookConf(state.id))
+		.remember();
 
 	const init$ = bookConf$.map(bookConf => {
 		if (bookConf.shouldFetchInfos) {
