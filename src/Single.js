@@ -53,7 +53,6 @@ export function Single(sources) {
 		if (bookConf.shouldFetchInfos) {
 			return {
 				HTTP: xs.of({
-					category: bookConf.givenUrl,
 					url: bookConf.givenUrl,
 					type: INFOS_REQUEST_TYPE,
 					lazy: true,
@@ -69,7 +68,6 @@ export function Single(sources) {
 				HTTP: xs.from(
 					chaptersToDl.map(x => ({
 						number: x,
-						category: bookConf.givenUrl,
 						lazy: true,
 						url: bookConf.getChapterUrl(x),
 					})),
@@ -105,7 +103,6 @@ export function Single(sources) {
 					const nextChapterNumber = nextState.chapters.length + 1;
 					return {
 						number: nextChapterNumber,
-						category: bookConf.givenUrl,
 						url: bookConf.getChapterUrl(nextChapterNumber),
 						lazy: true,
 					};
