@@ -1,7 +1,11 @@
+import assert from 'assert';
 import xs from 'xstream';
 import flattenConcurrently from 'xstream/extra/flattenConcurrently';
 import sampleCombine from 'xstream/extra/sampleCombine';
 import R from 'ramda';
+import debug from 'debug';
+
+const d = debug('app');
 
 // Book statuses
 const INIT_STATUS = 'INIT_STATUS';
@@ -23,23 +27,11 @@ export function makeInitialState(initialUrl) {
 	};
 }
 
-const receiveChapterAndAddNext = (index, content) => prevState =>
-	R.evolve(
-		{
-			chapters: R.pipe(
-				R.adjust(index, prev => ({
-					...prev,
-					status: 200,
-					content,
-				})),
-				R.append({
-					number: prevState.chapters.length + 1,
-					status: DOWNLOADING_STATUS,
-				}),
-			),
-		},
-		prevState,
-	);
+const findIndex = (requestNumber, prevState) => {
+	const foundIndex = R.findIndex(R.propEq('number', requestNumber), prevState.chapters);
+	assert.notEqual(foundIndex, -1, 'Sanity check: index should be found');
+	return foundIndex;
+};
 
 const split = whatToSplit => stream =>
 	stream
@@ -65,8 +57,8 @@ export function Single(sources) {
 					url: bookConf.givenUrl,
 					type: INFOS_REQUEST_TYPE,
 				}),
-				state: xs.of(() => ({
-					...makeInitialState(bookConf.givenUrl),
+				state: xs.of(prevState => ({
+					...prevState,
 					status: FETCHING_INFO_STATUS,
 				})),
 			};
@@ -80,8 +72,8 @@ export function Single(sources) {
 						url: bookConf.getChapterUrl(x),
 					})),
 				),
-				state: xs.of(() => ({
-					...makeInitialState(bookConf.givenUrl),
+				state: xs.of(prevState => ({
+					...prevState,
 					status: DOWNLOADING_STATUS,
 					chapters: chaptersToDl.map(x => ({
 						number: x,
@@ -92,64 +84,73 @@ export function Single(sources) {
 		}
 	});
 
-	const responseHandler$ = bookConf$
-		.map(bookConf =>
-			sources.HTTP.select(bookConf.givenUrl)
-				.map(response$ => response$.replaceError(err => xs.of(err.response))) // Just passthru errors
-				.compose(flattenConcurrently),
-		)
-		.flatten()
-		.compose(sampleCombine(sources.state.stream, bookConf$))
-		.map(([res, state, bookConf]) => {
+	const responseHandler$ = sources.HTTP.select()
+		.map(response$ => response$.replaceError(err => xs.of(err.response))) // Just passthru errors
+		.compose(flattenConcurrently)
+		.compose(sampleCombine(bookConf$))
+		.map(([res, bookConf]) => {
 			const requestNumber = res.request.number;
-			const foundIndex = R.findIndex(R.propEq('number', requestNumber), state.chapters);
 
 			// The meat of the download is done but
 			// @TODO (sinewyk): in case of 'in the middle' 404
-			// retry ...
+			// retry ... or other strategies depending on host, which is why dep Injection
 			// go back to 5 concurrent requests
 			// and try to warn user of missing chapter in the middle if still 404
 
 			if (res.status === 200) {
+				const HTTPReq$ = sources.state.stream.take(1).map(nextState => {
+					// @FIXME: dep injection, give state to getChapterUrl
+					const nextChapterNumber = nextState.chapters.length + 1;
+					return {
+						number: nextChapterNumber,
+						category: bookConf.givenUrl,
+						url: bookConf.getChapterUrl(nextChapterNumber),
+					};
+				});
 				return {
 					state: xs.of(prevState => {
-						if (prevState !== state) {
-							// @FIXME: race condition
-							// answer => https://gist.github.com/Sinewyk/7db1089db3a234afdad2b0bd2ec3ece2 ?
-							console.error(new Error('Race condition detected'));
-							process.exit(1);
-						}
-						return receiveChapterAndAddNext(foundIndex, res.text)(prevState);
+						const foundIndex = findIndex(requestNumber, prevState);
+						return R.evolve(
+							{
+								chapters: R.pipe(
+									R.adjust(foundIndex, prev => ({
+										...prev,
+										status: 200,
+										content: res.text.slice(0, 10),
+									})),
+									R.append({
+										number: prevState.chapters.length + 1,
+										status: DOWNLOADING_STATUS,
+									}),
+								),
+							},
+							prevState,
+						);
 					}),
-					HTTP: xs.of({
-						number: state.chapters.length + 1,
-						category: bookConf.givenUrl,
-						url: bookConf.getChapterUrl(state.chapters.length + 1),
-					}),
-					console: xs.from([
-						`Sending request ${JSON.stringify({
-							number: state.chapters.length + 1,
-							url: bookConf.getChapterUrl(state.chapters.length + 1),
-						})}\n`,
+					HTTP: HTTPReq$,
+					console: HTTPReq$.map(req => [
+						`Sending request ${req.number} ${req.url}\n`,
 						`${res.status} on ${res.request.url}\n`,
 					]),
 				};
 			} else if (res.status === 404) {
 				return {
-					state: xs.of(
-						R.evolve({
+					state: xs.of(prevState => {
+						const foundIndex = findIndex(requestNumber, prevState);
+						return R.evolve({
 							chapters: R.adjust(foundIndex, R.evolve({ status: R.always(404) })),
-						}),
-					),
+						})(prevState);
+					}),
 					console: xs.of(`${res.status} on ${res.request.url}\n`),
 				};
 			} else {
 				return {
-					state: xs.of(
-						R.evolve({
+					state: xs.of(prevState => {
+						const foundIndex = findIndex(requestNumber, prevState);
+						return R.evolve({
 							chapters: R.adjust(foundIndex, R.evolve({ status: R.always(res.status) })),
-						}),
-					),
+						})(prevState);
+					}),
 					console: xs.of(`${res.status} on ${res.request.url}\n`),
 				};
 			}
@@ -173,7 +174,7 @@ export function Single(sources) {
 	return {
 		state: xs.merge(splitState(init$), splitState(responseHandler$), end$),
 		HTTP: xs.merge(splitHTTP(init$), splitHTTP(responseHandler$)),
-		// console: xs.merge(splitConsole(responseHandler$), ended$),
+		console: d.enabled ? xs.merge(splitConsole(responseHandler$), ended$) : xs.empty(),
 		endState: ended$
 			.map(() => sources.state.stream)
 			.flatten()

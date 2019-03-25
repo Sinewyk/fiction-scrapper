@@ -7,7 +7,15 @@ export function makeConsoleDriver(options = {}) {
 		}
 
 		sink.subscribe({
-			next: msg => process.stdout.write(msg),
+			next: msg => {
+				if (Array.isArray(msg)) {
+					msg.forEach(val => process.stdout.write(val));
+				} else if (typeof msg === 'string') {
+					process.stdout.write(msg);
+				} else {
+					throw new Error('Console sink must be a stream of [string] or string');
+				}
+			},
 			error: err => process.stderr.write(err),
 			complete: () => {},
 		});

@@ -2,10 +2,6 @@ import xs from 'xstream';
 import isolate from '@cycle/isolate';
 import { makeCollection } from '@cycle/state';
 import { Single, makeInitialState } from './Single';
-import debounce from 'xstream/extra/debounce';
-import debug from 'debug';
-
-const d = debug('app');
 
 const Books = makeCollection({
 	item: Single,

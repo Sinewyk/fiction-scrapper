@@ -25,12 +25,12 @@ const drivers = {
 	HTTP: makeHTTPDriver(),
 };
 
-const { run, sources, sinks } = setup(withState(main), drivers);
-
-// sources.state._stream.debug().addListener({ next: () => {} });
+const { run, sinks } = setup(withState(main), drivers);
 
 sinks.endState.take(data.length).subscribe({
-	next: data => console.log(`done ${data.id}`),
+	next: data => {
+		console.log(`done ${data.id}, ${data.chapters.filter(x => x.status === 200).length} chapters`);
+	},
 	complete: () => console.log('Done =)'),
 });
 
