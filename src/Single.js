@@ -175,9 +175,6 @@ export function Single(sources) {
 		state: xs.merge(splitState(init$), splitState(responseHandler$), end$),
 		HTTP: xs.merge(splitHTTP(init$), splitHTTP(responseHandler$)),
 		console: d.enabled ? xs.merge(splitConsole(responseHandler$), ended$) : xs.empty(),
-		endState: ended$
-			.map(() => sources.state.stream)
-			.flatten()
-			.take(1),
+		endState: ended$.map(() => sources.state.stream).flatten(),
 	};
 }
