@@ -56,6 +56,7 @@ export function Single(sources) {
 					category: bookConf.givenUrl,
 					url: bookConf.givenUrl,
 					type: INFOS_REQUEST_TYPE,
+					lazy: true,
 				}),
 				state: xs.of(prevState => ({
 					...prevState,
@@ -69,6 +70,7 @@ export function Single(sources) {
 					chaptersToDl.map(x => ({
 						number: x,
 						category: bookConf.givenUrl,
+						lazy: true,
 						url: bookConf.getChapterUrl(x),
 					})),
 				),
@@ -105,6 +107,7 @@ export function Single(sources) {
 						number: nextChapterNumber,
 						category: bookConf.givenUrl,
 						url: bookConf.getChapterUrl(nextChapterNumber),
+						lazy: true,
 					};
 				});
 				return {

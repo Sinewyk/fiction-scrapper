@@ -12,7 +12,7 @@ const Books = makeCollection({
 			state: instances.pickMerge('state'),
 			console: instances.pickMerge('console'),
 			HTTP: instances.pickMerge('HTTP'),
-			endState: instances.pickMerge('endState').take(1),
+			endState: instances.pickMerge('endState'),
 		};
 	},
 });
