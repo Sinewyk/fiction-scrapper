@@ -1,37 +1,46 @@
 import xs from 'xstream';
 import { setup } from '@cycle/run';
-import main from './main';
 import { getBookConf } from './hosts';
 import { makeConsoleDriver } from './drivers/makeConsoleDriver';
 import { makeHTTPDriver } from '@cycle/http';
 import { withState } from '@cycle/state';
 import { makeInjectDriver } from './drivers/makeInjectDriver';
+import { Single } from './Single';
+import concat from 'xstream/extra/concat';
 
+// feed from commander or yargs or something
 const data = [
-	// 'https://www.fanfiction.net/s/12288523/1/Plucking-the-Strings-Redux',
-	// 'https://www.fanfiction.net/s/12576821/1/War-Crimes',
-	// 'https://jsonplaceholder.typicode.com/users/1',
-	// 'http://www.wuxiaworld.com/tde-index/tde-chapter-196/', // right host but 404
-	// 'https://www.wuxiaworld.com/novel/sovereign-of-the-three-realms/sotr-chapter-943',
-	'https://www.wuxiaworld.com/novel/tales-of-demons-and-gods/tdg-chapter-1',
+	'https://www.wuxiaworld.com/novel/tales-of-demons-and-gods/tdg-chapter-1', // high chapter count with hole in the middle
 	'https://www.wuxiaworld.com/novel/heros-shed-no-tears/hsnt-chapter-0', // low chapter count
 ];
 
-const drivers = {
-	// feed from commander or yargs or something
-	initialData: () => xs.fromArray(data),
+const baseDrivers = {
 	getBookConf: makeInjectDriver(getBookConf),
 	console: makeConsoleDriver(),
 	HTTP: makeHTTPDriver(),
 };
 
-const { run, sinks } = setup(withState(main), drivers);
+concat(
+	...data.map(url =>
+		xs
+			.of(url)
+			.map(url => {
+				console.log(`start ${url}`);
+				const { run, sinks } = setup(withState(Single), {
+					...baseDrivers,
+					initialData: () => xs.of(url),
+				});
 
-sinks.endState.take(data.length).subscribe({
+				run();
+
+				return sinks.endState;
+			})
+			.flatten(),
+	),
+).subscribe({
 	next: data => {
 		console.log(`done ${data.id}, ${data.chapters.filter(x => x.status === 200).length} chapters`);
 	},
-	complete: () => console.log('Done =)'),
+	error: console.error,
+	complete: () => console.log('complete'),
 });
-
-run();

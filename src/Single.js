@@ -116,7 +116,7 @@ export function Single(sources) {
 									R.adjust(foundIndex, prev => ({
 										...prev,
 										status: 200,
-										content: res.text.slice(0, 10),
+										content: res.text,
 									})),
 									R.append({
 										number: prevState.chapters.length + 1,
@@ -172,9 +172,17 @@ export function Single(sources) {
 		.map(state => `Finished ${state.id} !\n`);
 
 	return {
-		state: xs.merge(splitState(init$), splitState(responseHandler$), end$),
+		state: xs.merge(
+			sources.initialData.map(url => () => makeInitialState(url)),
+			splitState(init$),
+			splitState(responseHandler$),
+			end$,
+		),
 		HTTP: xs.merge(splitHTTP(init$), splitHTTP(responseHandler$)),
 		console: d.enabled ? xs.merge(splitConsole(responseHandler$), ended$) : xs.empty(),
-		endState: ended$.map(() => sources.state.stream).flatten(),
+		endState: ended$
+			.map(() => sources.state.stream)
+			.flatten()
+			.take(1),
 	};
 }
