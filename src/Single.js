@@ -107,26 +107,33 @@ export function Single(sources) {
 						lazy: true,
 					};
 				});
+				const saveFirstRaw$ =
+					requestNumber === 1
+						? xs.of(prevState => ({ ...prevState, header: bookConf.getHeader(prevState, res) }))
+						: xs.empty();
 				return {
-					state: xs.of(prevState => {
-						const foundIndex = findIndex(requestNumber, prevState);
-						return R.evolve(
-							{
-								chapters: R.pipe(
-									R.adjust(foundIndex, prev => ({
-										...prev,
-										status: 200,
-										content: res.text,
-									})),
-									R.append({
-										number: prevState.chapters.length + 1,
-										status: DOWNLOADING_STATUS,
-									}),
-								),
-							},
-							prevState,
-						);
-					}),
+					state: xs.merge(
+						saveFirstRaw$,
+						xs.of(prevState => {
+							const foundIndex = findIndex(requestNumber, prevState);
+							return R.evolve(
+								{
+									chapters: R.pipe(
+										R.adjust(foundIndex, prev => ({
+											...prev,
+											status: 200,
+											content: bookConf.getChapterContentFromResponse(requestNumber, res),
+										})),
+										R.append({
+											number: prevState.chapters.length + 1,
+											status: DOWNLOADING_STATUS,
+										}),
+									),
+								},
+								prevState,
+							);
+						}),
+					),
 					HTTP: HTTPReq$,
 					console: HTTPReq$.map(req => [
 						`Sending request ${req.number} ${req.url}\n`,

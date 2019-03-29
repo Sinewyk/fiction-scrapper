@@ -28,6 +28,7 @@
     "@cycle/isolate": "^5.0.0",
     "@cycle/run": "^5.2.0",
     "@cycle/state": "^1.1.0",
+    "cheerio": "^1.0.0-rc.2",
     "debug": "^4.1.1",
     "ramda": "^0.26.1",
     "xstream": "^11.10.0"

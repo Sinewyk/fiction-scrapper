@@ -10,7 +10,7 @@ import concat from 'xstream/extra/concat';
 
 // feed from commander or yargs or something
 const data = [
-	'https://www.wuxiaworld.com/novel/tales-of-demons-and-gods/tdg-chapter-1', // high chapter count with hole in the middle
+	// 'https://www.wuxiaworld.com/novel/tales-of-demons-and-gods/tdg-chapter-1', // high chapter count with hole in the middle
 	'https://www.wuxiaworld.com/novel/heros-shed-no-tears/hsnt-chapter-0', // low chapter count
 ];
 
@@ -24,8 +24,8 @@ concat(
 	...data.map(url =>
 		xs
 			.of(url)
+			.debug(url => console.log(`start ${url}`))
 			.map(url => {
-				console.log(`start ${url}`);
 				const { run, sinks } = setup(withState(Single), {
 					...baseDrivers,
 					initialData: () => xs.of(url),
@@ -37,10 +37,12 @@ concat(
 			})
 			.flatten(),
 	),
-).subscribe({
-	next: data => {
-		console.log(`done ${data.id}, ${data.chapters.filter(x => x.status === 200).length} chapters`);
-	},
-	error: console.error,
-	complete: () => console.log('complete'),
-});
+)
+	.debug(data =>
+		console.log(`done ${data.id}, ${data.chapters.filter(x => x.status === 200).length} chapters`),
+	)
+	.subscribe({
+		// next: data => console.log(data),
+		error: console.error,
+		complete: () => console.log('complete'),
+	});
