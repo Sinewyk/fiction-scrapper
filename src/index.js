@@ -7,6 +7,7 @@ import { withState } from '@cycle/state';
 import { makeInjectDriver } from './drivers/makeInjectDriver';
 import { Single } from './Single';
 import concat from 'xstream/extra/concat';
+import fs from 'fs-extra';
 
 // feed from commander or yargs or something
 const data = [
@@ -41,6 +42,18 @@ concat(
 	.debug(data =>
 		console.log(`done ${data.id}, ${data.chapters.filter(x => x.status === 200).length} chapters`),
 	)
+	.map(state => {
+		const content = state.chapters
+			.filter(x => x.status === 200)
+			.reduce((acc, chapter) => acc + chapter.content, state.header);
+
+		return {
+			state,
+			content: `<div>\n${content}\n</div>`,
+		};
+	})
+	.map(({ state, content }) => xs.fromPromise(fs.writeFile('placeholder.html', content)))
+	.flatten()
 	.subscribe({
 		// next: data => console.log(data),
 		error: console.error,
