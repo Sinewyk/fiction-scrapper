@@ -16,12 +16,10 @@ const defaultFilter = root => {
 export function createBookConf(initialUrl) {
 	const process = R.pipe(
 		url.parse,
-		// wuxiaworld supports https, it's broken for assets & shit
-		// but we are directly scrapping html so ... force https
 		R.assoc('protocol', 'https:'),
 		url.format,
-		str => str.split('-'),
-		strArr => strArr.slice(0, -1),
+		R.split('-'),
+		R.slice(0, -1),
 	);
 
 	const parts = process(initialUrl);
@@ -29,10 +27,9 @@ export function createBookConf(initialUrl) {
 	return {
 		shouldFetchInfos: false,
 		getChapterUrl: R.pipe(
-			R.pipe(
-				x => [x.toString()],
-				R.concat(parts),
-			),
+			R.toString,
+			x => [x],
+			R.concat(parts),
 			R.join('-'),
 		),
 		getChapterContentFromResponse: (number, response) => {
