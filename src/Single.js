@@ -66,7 +66,6 @@ export function Single(sources) {
 		.flatten()
 		.compose(sampleCombine(bookConf$))
 		.map(([res, bookConf]) => {
-			console.log('ok ?');
 			const chaptersToDl = [1, 2, 3, 4, 5];
 			return {
 				HTTP: xs.from(
@@ -79,8 +78,9 @@ export function Single(sources) {
 				),
 				state: xs.of(prevState => ({
 					...prevState,
+					// @FIXME: use bookConf + res to compute "infos", book header & stuff
+					header: bookConf.getHeader(prevState, res),
 					status: DOWNLOADING_STATUS,
-					// @TODO: use bookConf + res to compute "infos", book header & stuff
 					chapters: chaptersToDl.map(x => ({
 						number: x,
 						status: DOWNLOADING_STATUS,
@@ -113,13 +113,8 @@ export function Single(sources) {
 						lazy: true,
 					};
 				});
-				const saveFirstRaw$ =
-					requestNumber === 1
-						? xs.of(prevState => ({ ...prevState, header: bookConf.getHeader(prevState, res) }))
-						: xs.empty();
 				return {
 					state: xs.merge(
-						saveFirstRaw$,
 						xs.of(prevState => {
 							const foundIndex = findIndex(requestNumber, prevState);
 							return R.evolve(
