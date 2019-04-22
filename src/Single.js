@@ -15,6 +15,7 @@ const DOWNLOADING_STATUS = 'DOWNLOADING_STATUS';
 
 // Http request type for pivot
 const INFOS_REQUEST_TYPE = 'INFOS_REQUEST_TYPE';
+const CHAPTER_REQUEST_TYPE = 'CHAPTER_REQUEST_TYPE';
 
 export function makeInitialState(initialUrl) {
 	return {
@@ -46,42 +47,49 @@ export function Single(sources) {
 		.map(([state, getBookConf]) => getBookConf(state.id))
 		.remember();
 
-	const init$ = bookConf$.map(bookConf => {
-		if (bookConf.shouldFetchInfos) {
-			return {
-				HTTP: xs.of({
-					url: bookConf.givenUrl,
-					type: INFOS_REQUEST_TYPE,
-					lazy: true,
-				}),
-				state: xs.of(prevState => ({
-					...prevState,
-					status: FETCHING_INFO_STATUS,
-				})),
-			};
-		} else {
+	const fetchInfos$ = bookConf$.map(bookConf => {
+		return {
+			HTTP: xs.of({
+				url: bookConf.givenUrl,
+				category: INFOS_REQUEST_TYPE,
+				lazy: true,
+			}),
+			state: xs.of(prevState => ({
+				...prevState,
+				status: FETCHING_INFO_STATUS,
+			})),
+		};
+	});
+
+	const infosResponseHandler$ = sources.HTTP.select(INFOS_REQUEST_TYPE)
+		.map(response$ => response$.replaceError(err => xs.of(err.response))) // Just passthru errors
+		.flatten()
+		.compose(sampleCombine(bookConf$))
+		.map(([res, bookConf]) => {
+			console.log('ok ?');
 			const chaptersToDl = [1, 2, 3, 4, 5];
 			return {
 				HTTP: xs.from(
 					chaptersToDl.map(x => ({
+						url: bookConf.getChapterUrl(x),
+						category: CHAPTER_REQUEST_TYPE,
 						number: x,
 						lazy: true,
-						url: bookConf.getChapterUrl(x),
 					})),
 				),
 				state: xs.of(prevState => ({
 					...prevState,
 					status: DOWNLOADING_STATUS,
+					// @TODO: use bookConf + res to compute "infos", book header & stuff
 					chapters: chaptersToDl.map(x => ({
 						number: x,
 						status: DOWNLOADING_STATUS,
 					})),
 				})),
 			};
-		}
-	});
+		});
 
-	const responseHandler$ = sources.HTTP.select()
+	const responseHandler$ = sources.HTTP.select(CHAPTER_REQUEST_TYPE)
 		.map(response$ => response$.replaceError(err => xs.of(err.response))) // Just passthru errors
 		.compose(flattenConcurrently)
 		.compose(sampleCombine(bookConf$))
@@ -101,6 +109,7 @@ export function Single(sources) {
 					return {
 						number: nextChapterNumber,
 						url: bookConf.getChapterUrl(nextChapterNumber),
+						category: CHAPTER_REQUEST_TYPE,
 						lazy: true,
 					};
 				});
@@ -176,11 +185,16 @@ export function Single(sources) {
 	return {
 		state: xs.merge(
 			sources.initialData.map(url => () => makeInitialState(url)),
-			splitState(init$),
+			splitState(fetchInfos$),
+			splitState(infosResponseHandler$),
 			splitState(responseHandler$),
 			end$,
 		),
-		HTTP: xs.merge(splitHTTP(init$), splitHTTP(responseHandler$)),
+		HTTP: xs.merge(
+			splitHTTP(fetchInfos$),
+			splitHTTP(infosResponseHandler$),
+			splitHTTP(responseHandler$),
+		),
 		console: splitConsole(responseHandler$),
 		endState: ended$
 			.map(() => sources.state.stream)

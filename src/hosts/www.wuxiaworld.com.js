@@ -25,7 +25,6 @@ export function createBookConf(initialUrl) {
 	const parts = process(initialUrl);
 
 	return {
-		shouldFetchInfos: false,
 		getChapterUrl: R.pipe(
 			R.toString,
 			x => [x],

@@ -7,16 +7,16 @@ import xs from 'xstream';
 
 const getChapterUrl = x => String(x);
 
+const DUMMY_INITIAL_URL = 'some_initial_url';
+
 describe('Single', () => {
 	let dispose;
 
 	const drivers = {
-		initialData: () =>
-			xs.of('https://www.wuxiaworld.com/novel/sovereign-of-the-three-realms/sotr-chapter-943'),
+		initialData: () => xs.of(DUMMY_INITIAL_URL),
 		getBookConf: () =>
 			xs.of(givenUrl => ({
 				givenUrl,
-				shouldFetchInfos: false,
 				getChapterUrl,
 			})),
 		HTTP: mockHTTPDriver([
@@ -49,35 +49,11 @@ describe('Single', () => {
 		it('initialize the state', done => {
 			const { sources, run } = setup(withState(Single), drivers);
 
-			sources.state.stream.addListener({
+			sources.state.stream.take(1).addListener({
 				next: state => {
-					assert.equal(
-						state.id,
-						'https://www.wuxiaworld.com/novel/sovereign-of-the-three-realms/sotr-chapter-943',
-					);
-					assert.equal(state.status, 'DOWNLOADING_STATUS');
-					assert.deepStrictEqual(state.chapters, [
-						{
-							number: 1,
-							status: 'DOWNLOADING_STATUS',
-						},
-						{
-							number: 2,
-							status: 'DOWNLOADING_STATUS',
-						},
-						{
-							number: 3,
-							status: 'DOWNLOADING_STATUS',
-						},
-						{
-							number: 4,
-							status: 'DOWNLOADING_STATUS',
-						},
-						{
-							number: 5,
-							status: 'DOWNLOADING_STATUS',
-						},
-					]);
+					assert.equal(state.id, DUMMY_INITIAL_URL);
+					assert.equal(state.status, 'INIT_STATUS');
+					assert.deepStrictEqual(state.chapters, []);
 					done();
 				},
 				error: done,
@@ -86,23 +62,20 @@ describe('Single', () => {
 			dispose = run();
 		});
 
-		it('should send a request to fetch infos when needed', done => {
+		it('should send a request to fetch infos', done => {
 			const { sinks, run } = setup(withState(Single), {
 				...drivers,
 				getBookConf: () =>
 					xs.of(givenUrl => ({
 						givenUrl,
-						shouldFetchInfos: true,
 						getChapterUrl,
 					})),
 			});
 
-			sinks.HTTP.addListener({
+			sinks.HTTP.take(1).addListener({
 				next: req => {
-					assert.equal(
-						req.url,
-						'https://www.wuxiaworld.com/novel/sovereign-of-the-three-realms/sotr-chapter-943',
-					);
+					assert.equal(req.url, DUMMY_INITIAL_URL);
+					assert.equal(req.category, 'INFOS_REQUEST_TYPE');
 					done();
 				},
 				error: done,
