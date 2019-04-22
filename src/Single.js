@@ -3,9 +3,6 @@ import xs from 'xstream';
 import flattenConcurrently from 'xstream/extra/flattenConcurrently';
 import sampleCombine from 'xstream/extra/sampleCombine';
 import R from 'ramda';
-import debug from 'debug';
-
-const d = debug('app');
 
 // Book statuses
 const INIT_STATUS = 'INIT_STATUS';
@@ -174,9 +171,7 @@ export function Single(sources) {
 			status: OK_STATUS,
 		}));
 
-	const ended$ = sources.state.stream
-		.filter(state => state.status === OK_STATUS)
-		.map(state => `Finished ${state.id} !\n`);
+	const ended$ = sources.state.stream.filter(state => state.status === OK_STATUS);
 
 	return {
 		state: xs.merge(
@@ -186,7 +181,7 @@ export function Single(sources) {
 			end$,
 		),
 		HTTP: xs.merge(splitHTTP(init$), splitHTTP(responseHandler$)),
-		console: d.enabled ? xs.merge(splitConsole(responseHandler$), ended$) : xs.empty(),
+		console: splitConsole(responseHandler$),
 		endState: ended$
 			.map(() => sources.state.stream)
 			.flatten()

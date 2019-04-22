@@ -8,6 +8,9 @@ import { makeInjectDriver } from './drivers/makeInjectDriver';
 import { Single } from './Single';
 import concat from 'xstream/extra/concat';
 import fs from 'fs-extra';
+import debug from 'debug';
+
+const d = debug('app');
 
 // feed from commander or yargs or something
 const data = [
@@ -17,7 +20,7 @@ const data = [
 
 const baseDrivers = {
 	getBookConf: makeInjectDriver(getBookConf),
-	console: makeConsoleDriver(),
+	console: d.enabled ? makeConsoleDriver() : () => xs.empty(),
 	HTTP: makeHTTPDriver(),
 };
 
