@@ -1,4 +1,7 @@
+import assert from 'assert';
 import xs from 'xstream';
+
+const TYPE_ERROR = 'Console sink must be a Stream<String | String[]>';
 
 export function makeConsoleDriver(options = {}) {
 	return function consoleDriver(sink) {
@@ -9,11 +12,15 @@ export function makeConsoleDriver(options = {}) {
 		sink.subscribe({
 			next: msg => {
 				if (Array.isArray(msg)) {
-					msg.forEach(val => process.stdout.write(val));
+					msg.forEach(val => {
+						// Typescript to the rescue later ?
+						assert.equal(typeof val, 'string', TYPE_ERROR);
+						process.stdout.write(val);
+					});
 				} else if (typeof msg === 'string') {
 					process.stdout.write(msg);
 				} else {
-					throw new Error('Console sink must be a stream of [string] or string');
+					throw new Error(TYPE_ERROR);
 				}
 			},
 			error: err => process.stderr.write(err),
