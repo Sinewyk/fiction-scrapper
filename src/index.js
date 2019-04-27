@@ -1,3 +1,4 @@
+import assert from 'assert';
 import xs from 'xstream';
 import { setup } from '@cycle/run';
 import { getBookConf } from './hosts';
@@ -13,11 +14,9 @@ import { pageTemplate } from './templates';
 
 const d = debug('app');
 
-// feed from commander or yargs or something
-const data = [
-	// 'https://www.wuxiaworld.com/novel/tales-of-demons-and-gods/tdg-chapter-1', // high chapter count with hole in the middle
-	'https://www.wuxiaworld.com/novel/heros-shed-no-tears/hsnt-chapter-0', // low chapter count
-];
+const data = process.argv.filter(x => x.match(/http(s)?:/));
+
+assert(data.length > 0, 'No url to scrap');
 
 const baseDrivers = {
 	getBookConf: makeInjectDriver(getBookConf),
