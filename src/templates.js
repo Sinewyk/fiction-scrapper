@@ -50,7 +50,7 @@ export function pageTemplate(state) {
 	<head>
 		<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8"/>
 		<meta name="author" content="${state.infos.author}"/>
-		<title>${state.infos.author}: ${state.infos.title}</title>
+		<title>${state.infos.author ? `${state.infos.author}: ` : ''}${state.infos.title}</title>
 	</head>
 	<body>
 
