@@ -1,7 +1,13 @@
 import * as url from 'url';
 import R from 'ramda';
 import cheerio from 'cheerio';
-import { chapter, header } from '../templates';
+
+const DOMAIN_INFOS = {
+	protocol: 'https',
+	host: 'www.wuxiaworld.com',
+};
+
+const N_A = 'N/A';
 
 const defaultFilter = root => {
 	root.find('.chapter-nav').remove();
@@ -31,23 +37,41 @@ export function createBookConf(initialUrl) {
 			R.concat(parts),
 			R.join('-'),
 		),
-		getChapterContentFromResponse: (number, response) => {
+		getChapterFromResponse: response => {
 			const root = cheerio.load(response.text).root();
 			defaultFilter(root);
-			return chapter({
-				number,
+			return {
 				name: root.find('.p-15 h4').html(),
-				content: root.find('.p-15 .fr-view').toString(),
-			});
+				content: root.find('.p-15 .fr-view').html(),
+			};
 		},
-		getHeader: (state, res) => {
+		getInfos: res => {
 			const root = cheerio.load(res.text).root();
-			return header({
+			const source = url.format(DOMAIN_INFOS);
+			return {
 				title: root
 					.find('.caption h4')
 					.first()
 					.html(),
-			});
+				link: url.format({
+					...DOMAIN_INFOS,
+					pathname: root
+						.find('.caption a')
+						.first()
+						.attr('href'),
+				}),
+				category: 'wuxia',
+				genre: 'fantasy',
+				author: '',
+				authorlink: '',
+				lastUpdated: N_A,
+				wordsCount: N_A,
+				rating: N_A,
+				status: N_A,
+				content: N_A,
+				source,
+				summary: N_A,
+			};
 		},
 	};
 }

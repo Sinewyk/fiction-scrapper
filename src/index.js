@@ -9,6 +9,7 @@ import { Single } from './Single';
 import concat from 'xstream/extra/concat';
 import fs from 'fs-extra';
 import debug from 'debug';
+import { pageTemplate } from './templates';
 
 const d = debug('app');
 
@@ -46,16 +47,17 @@ concat(
 		console.log(`done ${data.id}, ${data.chapters.filter(x => x.status === 200).length} chapters`),
 	)
 	.map(state => {
-		const content = state.chapters
-			.filter(x => x.status === 200)
-			.reduce((acc, chapter) => acc + chapter.content, state.header);
+		const content = pageTemplate({
+			...state,
+			chapters: state.chapters.filter(x => x.status === 200),
+		});
 
 		return {
-			state,
-			content: `<div>\n${content}\n</div>`,
+			name: `${state.infos.author ? `${state.infos.author} - ` : ''}${state.infos.title}.html`,
+			content,
 		};
 	})
-	.map(({ state, content }) => xs.fromPromise(fs.writeFile('placeholder.html', content)))
+	.map(({ name, content }) => xs.fromPromise(fs.writeFile(name, content)))
 	.flatten()
 	.subscribe({
 		// next: data => console.log(data),

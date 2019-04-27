@@ -67,6 +67,7 @@ export function Single(sources) {
 		.compose(sampleCombine(bookConf$))
 		.map(([res, bookConf]) => {
 			const chaptersToDl = [1, 2, 3, 4, 5];
+			const infos = bookConf.getInfos(res);
 			return {
 				HTTP: xs.from(
 					chaptersToDl.map(x => ({
@@ -78,14 +79,14 @@ export function Single(sources) {
 				),
 				state: xs.of(prevState => ({
 					...prevState,
-					// @FIXME: use bookConf + res to compute "infos", book header & stuff
-					header: bookConf.getHeader(prevState, res),
+					infos,
 					status: DOWNLOADING_STATUS,
 					chapters: chaptersToDl.map(x => ({
 						number: x,
 						status: DOWNLOADING_STATUS,
 					})),
 				})),
+				console: xs.of(JSON.stringify(infos, null, '  ')),
 			};
 		});
 
@@ -123,7 +124,7 @@ export function Single(sources) {
 										R.adjust(foundIndex, prev => ({
 											...prev,
 											status: 200,
-											content: bookConf.getChapterContentFromResponse(requestNumber, res),
+											...bookConf.getChapterFromResponse(res),
 										})),
 										R.append({
 											number: prevState.chapters.length + 1,
@@ -190,7 +191,7 @@ export function Single(sources) {
 			splitHTTP(infosResponseHandler$),
 			splitHTTP(responseHandler$),
 		),
-		console: splitConsole(responseHandler$),
+		console: xs.merge(splitConsole(infosResponseHandler$), splitConsole(responseHandler$)),
 		endState: ended$
 			.map(() => sources.state.stream)
 			.flatten()
