@@ -5,7 +5,7 @@ function chapterTemplate({ number, name, content }) {
 	assert(name, 'Chapter must have a name');
 	assert(content, 'Chapter must have content');
 
-	return `<h2 class="chapter">Chapter ${number}${name ? `: ${name}` : ''}</h2>${content}<br/>`;
+	return `<h2 class="chapter">Chapter ${number}${name ? `: ${name}` : ''}</h2>${content}`;
 }
 
 function headerTemplate({
@@ -57,7 +57,7 @@ export function pageTemplate(state) {
 		${headerTemplate(state.infos)}
 
 		<!--CHAPTERAREA START-->
-		${state.chapters.map(chapterTemplate)}
+		${state.chapters.reduce((acc, chapter) => `${acc}${chapterTemplate(chapter)}<br/>`, '')}
 		<!--CHAPTERAREA STOP-->
 
 	</body>

@@ -48,7 +48,9 @@ concat(
 	.map(state => {
 		const content = pageTemplate({
 			...state,
-			chapters: state.chapters.filter(x => x.status === 200),
+			chapters: state.chapters.filter(
+				x => x.status === 200 && x.content !== '' && x.content != null, // @TODO: push verif of "real" chapter into bookConf or something
+			),
 		});
 
 		return {
